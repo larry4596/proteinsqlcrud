@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Protein Input</title>
+  </head>
+  <body>
+    <h1>Enter Protein Sequence</h1>
+
+    <form method="POST" action="/analyze">
+      <label>Protein Name:</label><br />
+      <input type="text" name="protein_name" required /><br /><br />
+
+      <label>Amino Acid Sequence:</label><br />
+      <textarea name="sequence" rows="6" cols="50" required></textarea
+      ><br /><br />
+
+      <button type="submit">Analyze Protein</button>
+    </form>
+
+    <br />
+    <a href="/">Back to Home</a>
+
+    {% if error_message %}
+    <script>
+      alert("{{ error_message }}");
+    </script>
+    {% endif %}
+  </body>
+</html>

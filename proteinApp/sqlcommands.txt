@@ -1,0 +1,10 @@
+CREATE database protein_db;
+CREATE TABLE proteins (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    sequence TEXT NOT NULL,
+    length INT NOT NULL,
+    molecular_weight FLOAT NOT NULL,
+    unique_count INT NOT NULL,
+    frequencies TEXT NOT NULL
+);

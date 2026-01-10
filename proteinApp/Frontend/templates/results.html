@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Protein Analysis Results</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <h1>Protein Analysis Results</h1>
+
+    <table border="1" cellpadding="5">
+      <tr>
+        <th>Protein Name</th>
+        <td>{{ protein_name }}</td>
+      </tr>
+      <tr>
+        <th>Sequence Length</th>
+        <td>{{ length }}</td>
+      </tr>
+      <tr>
+        <th>Molecular Weight (Da)</th>
+        <td>{{ molecular_weight }}</td>
+      </tr>
+      <tr>
+        <th>Unique Amino Acids</th>
+        <td>{{ unique_count }}</td>
+      </tr>
+    </table>
+
+    <h2>Amino Acid Frequency</h2>
+    <canvas id="freqChart" width="600" height="400"></canvas>
+
+    <script>
+            const ctx = document.getElementById('freqChart').getContext('2d');
+            const freqChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: {{ amino_acids | safe }},
+                    datasets: [{
+                        label: 'Frequency',
+                        data: {{ frequencies | safe }},
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                    }]
+                },
+                options: {
+          scales: {
+              y: {
+                  beginAtZero: true,
+                  ticks: {
+                      stepSize: 1,  // Ensures ticks increment by 1
+                      precision: 0  // No decimals
+                  }
+              }
+          }
+      }
+
+            });
+    </script>
+
+    <br /><a href="/input">Analyze Another Protein</a>
+  </body>
+</html>

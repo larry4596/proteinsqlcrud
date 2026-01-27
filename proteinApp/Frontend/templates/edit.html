@@ -1,21 +1,270 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Edit Protein</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BME 512 | Edit Protein</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        body {
+            background: #f0f4fb;
+            color: #1f2933;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ================= NAVBAR ================= */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: #ffffff;
+            color: rgb(14, 28, 223);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-left img {
+            width: 50px;
+        }
+
+        nav {
+            display: flex;
+            gap: 25px;
+        }
+
+        nav a {
+            color: rgb(14, 28, 223);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        nav a:hover {
+            color: #fbbf24;
+        }
+
+        .nav-right {
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* ================= PAGE HEADER ================= */
+        .page-header {
+            padding: 60px 20px;
+            text-align: center;
+            background: linear-gradient(rgba(11, 61, 145, 0.9),
+                    rgba(11, 61, 145, 0.9));
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+        }
+
+        /* ================= CONTENT ================= */
+        .content-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .content {
+            max-width: 800px;
+            width: 100%;
+            padding: 50px 40px;
+            background: linear-gradient(rgba(3, 10, 30, 0.85),
+                    rgba(3, 10, 30, 0.85)),
+                url('dna-hero.jpg') center/cover;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-section {
+            margin-bottom: 35px;
+        }
+
+        .input-section h2 {
+            color: white;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+
+        .input-section p {
+            color: #e5e7eb;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            outline: none;
+            background: rgba(255, 255, 255, 0.95);
+            transition: 0.3s;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: #fbbf24;
+            background: white;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        /* ================= BUTTONS ================= */
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .buttons button,
+        .buttons a {
+            flex: 1;
+            padding: 14px;
+            background-color: #fbbf24;
+            color: #1f2933;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .buttons button:hover,
+        .buttons a:hover {
+            background-color: #f59e0b;
+        }
+
+        /* ================= FOOTER ================= */
+        footer {
+            background: linear-gradient(to right, #062c6f, #0b3d91);
+            color: white;
+            text-align: center;
+            padding: 35px 20px;
+        }
+
+        footer ul {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        footer ul li {
+            margin: 6px 0;
+        }
+
+        footer p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <h1>Edit Protein</h1>
 
-    <form method="POST">
-        <label>Protein Name:</label><br>
-        <input type="text" name="protein_name" value="{{ protein.name }}" required><br><br>
+    <!-- NAVBAR -->
+    <header>
+        <div class="nav-left">
+            <a href="/">
+                <img src="/static/unilag-logo.png" alt="UNILAG Logo">
+            </a>
+            <div>
+                <strong>BME 512</strong><br>
+                Group 3
+            </div>
+        </div>
 
-        <label>Amino Acid Sequence:</label><br>
-        <textarea name="sequence" rows="6" cols="50" required>{{ protein.sequence }}</textarea><br><br>
+        <nav>
+            <a href="/info">Info</a>
+            <a href="/input">Input</a>
+        </nav>
 
-        <button type="submit">Update Protein</button>
-    </form>
+        <div class="nav-right"><a href="/search">🔍</a></div>
+    </header>
 
-    <br><a href="/search">Back to Search</a>
+    <!-- PAGE HEADER -->
+    <section class="page-header">
+        <h1>Edit Protein</h1>
+    </section>
+
+    <!-- CONTENT -->
+    <section class="content-wrapper">
+        <div class="content">
+
+            <form method="POST">
+
+                <div class="input-section">
+                    <h2>Protein Name</h2>
+                    <p>Edit protein name (first letter must be capitalized).</p>
+                    <input type="text" name="protein_name"
+                        value="{{ protein.name }}" required>
+                </div>
+
+                <div class="input-section">
+                    <h2>Amino Acid Sequence</h2>
+                    <p>
+                        Modify amino acid sequence.<br>
+                        Only capital letters allowed. No spaces or symbols.
+                    </p>
+                    <textarea name="sequence" rows="6"
+                        required>{{ protein.sequence }}</textarea>
+                </div>
+
+                <div class="buttons">
+                    <button type="submit">UPDATE PROTEIN</button>
+                    <a href="/search">BACK TO SEARCH</a>
+                </div>
+
+            </form>
+
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <h3>Created by BME 512 Group 3 consisting of</h3>
+        <ul>
+            <li>Dolapo Oyewole</li>
+            <li>Jennifer Onwuasor</li>
+            <li>Ayinla Nimatullah</li>
+            <li>Tenioluwa Elliot</li>
+            <li>Igbemo Emmanuel</li>
+        </ul>
+        <p>© 2026 All Rights Reserved.</p>
+    </footer>
+
 </body>
+
 </html>

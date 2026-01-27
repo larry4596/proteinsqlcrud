@@ -1,61 +1,282 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Protein Analysis Results</title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BME 512 | Protein Analysis Results</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  </head>
-  <body>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        body {
+            background: #f0f4fb;
+            color: #1f2933;
+        }
+
+        /* ================= NAVBAR ================= */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: #ffffff;
+            color: rgb(14, 28, 223);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-left img {
+            width: 50px;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            gap: 25px;
+        }
+
+        nav a {
+            color: rgb(14, 28, 223);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .nav-right {
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* ================= PAGE HEADER ================= */
+        .page-header {
+            padding: 60px 20px;
+            text-align: center;
+            background: linear-gradient(rgba(11, 61, 145, 0.9), rgba(11, 61, 145, 0.9));
+            color: white;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            color: rgb(14, 28, 223);
+            text-align: center;
+        }
+
+        h2 {
+            margin: 40px 0 20px;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+        }
+
+        /* Chart container */
+        .chart-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        /* Link styling */
+        a {
+            color: rgb(14, 28, 223);
+            font-weight: 600;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 60px;
+            padding: 30px 20px;
+            text-align: center;
+            background-color: rgb(14, 28, 223);
+            color: white;
+            font-size: 14px;
+        }
+
+        footer ul {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        footer li {
+            margin: 6px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<header>
+    <div class="nav-left">
+        <a href="/">
+            <img src="{{ url_for('static', filename='unilag-logo.png') }}" alt="UNILAG Logo" width="50">
+        </a>
+        <div>
+            <strong>BME 512</strong><br>
+            Group 3
+        </div>
+    </div>
+
+    <nav>
+        <a href="/info">Info</a>
+        <a href="/input">Input</a>
+    </nav>
+
+    <div class="nav-right">
+        <a href="/search">🔍</a>
+    </div>
+</header>
+
+<!-- PAGE HEADER -->
+<section class="page-header">
     <h1>Protein Analysis Results</h1>
+</section>
 
-    <table border="1" cellpadding="5">
-      <tr>
-        <th>Protein Name</th>
-        <td>{{ protein_name }}</td>
-      </tr>
-      <tr>
-        <th>Sequence Length</th>
-        <td>{{ length }}</td>
-      </tr>
-      <tr>
-        <th>Molecular Weight (Da)</th>
-        <td>{{ molecular_weight }}</td>
-      </tr>
-      <tr>
-        <th>Unique Amino Acids</th>
-        <td>{{ unique_count }}</td>
-      </tr>
-    </table>
+<!-- MAIN CONTENT -->
+<main class="container">
 
-    <h2>Amino Acid Frequency</h2>
-    <canvas id="freqChart" width="600" height="400"></canvas>
+    <section class="protein-info">
+        <h2>Protein Details</h2>
+        <table>
+            <tr>
+                <th>Protein Name</th>
+                <td>{{ protein_name }}</td>
+            </tr>
+            <tr>
+                <th>Sequence Length</th>
+                <td>{{ length }}</td>
+            </tr>
+            <tr>
+                <th>Molecular Weight (Da)</th>
+                <td>{{ molecular_weight }}</td>
+            </tr>
+            <tr>
+                <th>Unique Amino Acids</th>
+                <td>{{ unique_count }}</td>
+            </tr>
+        </table>
+    </section>
 
-    <script>
-            const ctx = document.getElementById('freqChart').getContext('2d');
-            const freqChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: {{ amino_acids | safe }},
-                    datasets: [{
-                        label: 'Frequency',
-                        data: {{ frequencies | safe }},
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
-                    }]
+    <section class="chart-container">
+        <h2>Amino Acid Frequency</h2>
+        <canvas id="freqChart" width="700" height="400"></canvas>
+    </section>
+
+    <div style="text-align: center; margin: 40px 0;">
+        <a href="/input">Analyze Another Protein</a>
+    </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+    <h3>Created by BME 512 Group 3 consisting of</h3>
+    <ul>
+        <li>Dolapo Oyewole</li>
+        <li>Jennifer Onwuasor</li>
+        <li>Ayinla Nimatullah</li>
+        <li>Tenioluwa Elliot</li>
+        <li>Igbemo Emmanuel</li>
+    </ul>
+    <p>© 2026 All Rights Reserved.</p>
+</footer>
+
+<!-- CHART SCRIPT -->
+<script>
+    const ctx = document.getElementById('freqChart').getContext('2d');
+    const freqChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ amino_acids | safe }},
+            datasets: [{
+                label: 'Frequency',
+                data: {{ frequencies | safe }},
+                backgroundColor: 'rgba(14, 28, 223, 0.7)',
+                borderColor: 'rgba(14, 28, 223, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        precision: 0
+                    },
+                    title: {
+                        display: true,
+                        text: 'Count'
+                    }
                 },
-                options: {
-          scales: {
-              y: {
-                  beginAtZero: true,
-                  ticks: {
-                      stepSize: 1,  // Ensures ticks increment by 1
-                      precision: 0  // No decimals
-                  }
-              }
-          }
-      }
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Amino Acid'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        }
+    });
+</script>
 
-            });
-    </script>
-
-    <br /><a href="/input">Analyze Another Protein</a>
-  </body>
+</body>
 </html>

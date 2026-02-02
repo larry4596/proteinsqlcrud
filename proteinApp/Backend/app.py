@@ -1,21 +1,36 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, flash
 import os
 import mysql.connector
 import json
+from dotenv import load_dotenv
 
+# Load environment variables from .env file (local development only)
+load_dotenv()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",       # default XAMPP MySQL user
-        password="",       # default XAMPP MySQL password
-        database="protein_db"
-    )
-
+    try:
+        connection = mysql.connector.connect(
+            host=os.getenv("DB_HOST", "bme512-mysql-igm4emperor-d381.h.aivencloud.com"),
+            port=int(os.getenv("DB_PORT", "23377")),
+            user=os.getenv("DB_USER", "avnadmin"),
+            password=os.getenv("DB_PASSWORD"),                  # Required in prod (Render env vars)
+            database=os.getenv("DB_NAME", "defaultdb"),
+            ssl_ca=os.path.join(BASE_DIR, "ca.pem"),
+            ssl_verify_cert=True,
+            ssl_verify_identity=True,
+            connect_timeout=20,
+            use_pure=True
+        )
+        print("✅ Connected to Aiven MySQL successfully!")
+        return connection
+    except mysql.connector.Error as err:
+        print(f"❌ Connection failed: {err.msg} (errno: {err.errno})")
+        raise
 
 VALID_AMINO_ACIDS = set("ARNDCEQGHILKMFPSTWYV")
 
-# Average molecular weights of amino acids (in Daltons)
 AMINO_ACID_WEIGHTS = {
     'A': 89.09,  'R': 174.20, 'N': 132.12, 'D': 133.10,
     'C': 121.15, 'Q': 146.15, 'E': 147.13, 'G': 75.07,
@@ -26,9 +41,7 @@ AMINO_ACID_WEIGHTS = {
 
 def calculate_molecular_weight(sequence):
     sequence = sequence.upper()
-    weight = 0
-    for aa in sequence:
-        weight += AMINO_ACID_WEIGHTS.get(aa, 0)
+    weight = sum(AMINO_ACID_WEIGHTS.get(aa, 0) for aa in sequence)
     return round(weight, 2)
 
 def amino_acid_frequency(sequence):
@@ -40,55 +53,41 @@ def amino_acid_frequency(sequence):
     return freq
 
 def is_valid_sequence(sequence):
-    sequence = sequence.upper()
-
-    for char in sequence:
-        if char not in VALID_AMINO_ACIDS:
-            return False
-
-    return True
-
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    return all(char in VALID_AMINO_ACIDS for char in sequence.upper())
 
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "../frontend/templates"),
-    static_folder=os.path.join(BASE_DIR, "../frontend/static")   
+    static_folder=os.path.join(BASE_DIR, "../frontend/static")
 )
+
+# Secure secret key from env var (generate a strong one for production!)
+app.secret_key = os.getenv("SECRET_KEY", "dev-fallback-do-not-use-in-production-123456")
 
 @app.route("/")
 def home():
     return render_template("home.html")
 
-
 @app.route("/input")
 def input_page():
     return render_template("input.html")
 
-
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    protein_name = request.form.get("protein_name")
-    sequence = request.form.get("sequence")
+    protein_name = request.form.get("protein_name", "").strip()
+    sequence = request.form.get("sequence", "").strip()
 
     if not protein_name or not sequence:
-        return render_template(
-            "input.html",
-            error_message="Protein name and sequence are required."
-        )
+        flash("Protein name and sequence are required.", "danger")
+        return render_template("input.html")
 
-    sequence = sequence.upper().strip()
+    sequence = sequence.upper()
 
-    # Validation
     invalid_chars = [c for c in sequence if c not in VALID_AMINO_ACIDS]
     if invalid_chars:
-        return render_template(
-            "input.html",
-            error_message=f"Sequence contains invalid characters: {', '.join(invalid_chars)}"
-        )
+        flash(f"Invalid characters: {', '.join(invalid_chars)}", "danger")
+        return render_template("input.html")
 
-    # Properties
     seq_length = len(sequence)
     mol_weight = calculate_molecular_weight(sequence)
     freq_dict = amino_acid_frequency(sequence)
@@ -96,18 +95,26 @@ def analyze():
 
     freq_json = json.dumps(freq_dict)
 
-    # Save to DB
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-     "INSERT INTO proteins (name, sequence, length, molecular_weight, unique_count, frequencies) VALUES (%s, %s, %s, %s, %s, %s)",
-        (protein_name, sequence, seq_length, mol_weight, unique_count, freq_json)
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO proteins (name, sequence, length, molecular_weight, unique_count, frequencies) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (protein_name, sequence, seq_length, mol_weight, unique_count, freq_json)
+        )
+        conn.commit()
+    except Exception as e:
+        flash(f"Database error: {str(e)}", "danger")
+        return render_template("input.html")
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
 
-    # Prepare data for chart
+    flash("Protein analyzed and saved successfully!", "success")
+
     amino_acids = list(freq_dict.keys())
     frequencies = list(freq_dict.values())
 
@@ -121,7 +128,6 @@ def analyze():
         frequencies=frequencies
     )
 
-
 @app.route("/search", methods=["GET", "POST"])
 def search():
     query_name = ""
@@ -132,24 +138,29 @@ def search():
         query_name = request.form.get("protein_name", "").strip()
         query_sequence = request.form.get("sequence", "").strip().upper()
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
 
-        # Build SQL query dynamically
-        sql = "SELECT * FROM proteins WHERE 1=1"
-        params = []
+            sql = "SELECT * FROM proteins WHERE 1=1"
+            params = []
 
-        if query_name:
-            sql += " AND name LIKE %s"
-            params.append(f"%{query_name}%")
-        if query_sequence:
-            sql += " AND sequence LIKE %s"
-            params.append(f"%{query_sequence}%")
+            if query_name:
+                sql += " AND name LIKE %s"
+                params.append(f"%{query_name}%")
+            if query_sequence:
+                sql += " AND sequence LIKE %s"
+                params.append(f"%{query_sequence}%")
 
-        cursor.execute(sql, params)
-        proteins = cursor.fetchall()
-        cursor.close()
-        conn.close()
+            cursor.execute(sql, params)
+            proteins = cursor.fetchall()
+        except Exception as e:
+            flash(f"Search failed: {str(e)}", "danger")
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
 
     return render_template(
         "search.html",
@@ -160,96 +171,108 @@ def search():
 
 @app.route("/info")
 def info_page():
-        return render_template("info.html")
+    return render_template("info.html")
 
 @app.route("/protein/<int:protein_id>")
 def view_protein(protein_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM proteins WHERE id=%s", (protein_id,))
-    protein = cursor.fetchone()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM proteins WHERE id=%s", (protein_id,))
+        protein = cursor.fetchone()
 
-    if not protein:
-        return "Protein not found", 404
+        if not protein:
+            flash("Protein not found", "danger")
+            return redirect("/search")
 
-    # Prepare data for chart
-    import json
-    freq_dict = json.loads(protein['frequencies'])
-    amino_acids = list(freq_dict.keys())
-    frequencies = list(freq_dict.values())
+        freq_dict = json.loads(protein['frequencies'])
+        amino_acids = list(freq_dict.keys())
+        frequencies = list(freq_dict.values())
 
-    return render_template(
-        "results.html",
-        protein_name=protein['name'],
-        length=protein['length'],
-        molecular_weight=protein['molecular_weight'],
-        unique_count=protein['unique_count'],
-        amino_acids=amino_acids,
-        frequencies=frequencies
-    )
-
+        return render_template(
+            "results.html",
+            protein_name=protein['name'],
+            length=protein['length'],
+            molecular_weight=protein['molecular_weight'],
+            unique_count=protein['unique_count'],
+            amino_acids=amino_acids,
+            frequencies=frequencies
+        )
+    except Exception as e:
+        flash(f"Error loading protein: {str(e)}", "danger")
+        return redirect("/search")
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
 
 @app.route("/delete/<int:protein_id>", methods=["POST"])
 def delete_protein(protein_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM proteins WHERE id=%s", (protein_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM proteins WHERE id=%s", (protein_id,))
+        conn.commit()
+        flash("Protein deleted successfully!", "success")
+    except Exception as e:
+        flash(f"Delete failed: {str(e)}", "danger")
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
     return redirect("/search")
+
 @app.route("/edit/<int:protein_id>", methods=["GET", "POST"])
 def edit_protein(protein_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM proteins WHERE id=%s", (protein_id,))
+        protein = cursor.fetchone()
 
-    # Fetch protein
-    cursor.execute("SELECT * FROM proteins WHERE id=%s", (protein_id,))
-    protein = cursor.fetchone()
+        if not protein:
+            flash("Protein not found", "danger")
+            return redirect("/search")
 
-    if not protein:
-        cursor.close()
-        conn.close()
-        return "Protein not found", 404
+        if request.method == "POST":
+            name = request.form.get("protein_name", "").strip()
+            sequence = request.form.get("sequence", "").strip().upper()
 
-    if request.method == "POST":
-        # Get updated values
-        name = request.form.get("protein_name").strip()
-        sequence = request.form.get("sequence").strip().upper()
+            invalid_chars = [c for c in sequence if c not in VALID_AMINO_ACIDS]
+            if invalid_chars:
+                flash(f"Invalid characters: {', '.join(invalid_chars)}", "danger")
+                return render_template("edit.html", protein=protein)
 
-        # Validation
-        invalid_chars = [c for c in sequence if c not in VALID_AMINO_ACIDS]
-        if invalid_chars:
+            length = len(sequence)
+            molecular_weight = calculate_molecular_weight(sequence)
+            freq_dict = amino_acid_frequency(sequence)
+            unique_count = len([aa for aa in freq_dict if freq_dict[aa] > 0])
+            freq_json = json.dumps(freq_dict)
+
+            cursor.execute(
+                "UPDATE proteins SET name=%s, sequence=%s, length=%s, molecular_weight=%s, unique_count=%s, frequencies=%s "
+                "WHERE id=%s",
+                (name, sequence, length, molecular_weight, unique_count, freq_json, protein_id)
+            )
+            conn.commit()
+            flash("Protein updated successfully!", "success")
+            return redirect(f"/protein/{protein_id}")
+
+        return render_template("edit.html", protein=protein)
+
+    except Exception as e:
+        flash(f"Edit error: {str(e)}", "danger")
+        return redirect("/search")
+    finally:
+        if 'cursor' in locals():
             cursor.close()
+        if 'conn' in locals():
             conn.close()
-            return f"Invalid characters: {', '.join(invalid_chars)}"
-
-        # Recalculate properties
-        length = len(sequence)
-        molecular_weight = calculate_molecular_weight(sequence)
-        freq_dict = amino_acid_frequency(sequence)
-        unique_count = len([aa for aa in freq_dict if freq_dict[aa] > 0])
-        freq_json = json.dumps(freq_dict)
-
-        # Update DB
-        cursor.execute(
-            "UPDATE proteins SET name=%s, sequence=%s, length=%s, molecular_weight=%s, unique_count=%s, frequencies=%s WHERE id=%s",
-            (name, sequence, length, molecular_weight, unique_count, freq_json, protein_id)
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return redirect(f"/protein/{protein_id}")  # Show updated results
-
-    cursor.close()
-    conn.close()
-
-    # GET → render form
-    return render_template("edit.html", protein=protein)
-
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Use FLASK_DEBUG env var (set to True locally if needed, False on Render)
+    debug_mode = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    app.run(debug=debug_mode)

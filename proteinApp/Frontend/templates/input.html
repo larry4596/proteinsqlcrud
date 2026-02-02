@@ -224,27 +224,30 @@
     <section class="content-wrapper">
         <div class="content">
 
-            <div class="input-section">
-                <h2>Protein Name</h2>
-                <p>Input protein name below (First letter must be capitalized).</p>
-                <input type="text" id="proteinName" placeholder="Enter protein name">
-            </div>
+            <form method="POST" action="{{ url_for('analyze') }}">
 
-            <div class="input-section">
-                <h2>Amino Acid Sequence</h2>
-                <p>
-                    Enter the amino acid sequence below.<br>
-                    Must contain only the 20 standard amino acid letters in CAPITAL letters.<br>
-                    No spaces, numbers, or symbols.
-                </p>
-                <textarea id="sequence" rows="5"
-                    placeholder="e.g. MVLSPADKTNVKAAWGKVGA"></textarea>
-            </div>
+                <div class="input-section">
+                    <h2>Protein Name</h2>
+                    <p>Input protein name below (First letter must be capitalized).</p>
+                    <input type="text" name="protein_name" placeholder="Enter protein name" required>
+                </div>
 
-            <div class="buttons">
-                <button>SAVE</button>
-                <button>COMPUTE</button>
-            </div>
+                <div class="input-section">
+                    <h2>Amino Acid Sequence</h2>
+                    <p>
+                        Enter the amino acid sequence below.<br>
+                        Must contain only the 20 standard amino acid letters in CAPITAL letters.<br>
+                        No spaces, numbers, or symbols.
+                    </p>
+                    <textarea name="sequence" rows="5" placeholder="e.g. MVLSPADKTNVKAAWGKVGA" required></textarea>
+                </div>
+
+                <div class="buttons">
+                    <button type="submit" name="action" value="save">SAVE</button>
+                    <button type="submit" name="action" value="compute">COMPUTE</button>
+                </div>
+
+            </form>
 
         </div>
     </section>

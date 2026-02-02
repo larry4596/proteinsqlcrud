@@ -28,7 +28,7 @@
             padding: 15px 30px;
             background: #ffffff;
             color: rgb(14, 28, 223);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             flex-shrink: 0;
         }
 
@@ -40,10 +40,6 @@
 
         .nav-left img {
             width: 50px;
-        }
-
-        a {
-            text-decoration: none;
         }
 
         nav {
@@ -64,6 +60,10 @@
         .nav-right {
             font-size: 20px;
             cursor: pointer;
+        }
+
+        .nav-right a {
+            text-decoration: none;
             color: rgb(14, 28, 223);
         }
 
@@ -71,25 +71,24 @@
         .page-header {
             padding: 60px 20px;
             text-align: center;
-            background: linear-gradient(rgba(11, 61, 145, 0.9), rgba(11, 61, 145, 0.9));
+            background: linear-gradient(rgba(11, 61, 145, 0.9), rgba(11, 61, 145, 0.9)),
+                        url("{{ url_for('static', filename='dna-hero.jpg') }}") center/cover;
             color: white;
             flex-shrink: 0;
-            width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         .page-header h1 {
             font-size: 32px;
+            color: white;
         }
 
         /* ================= CONTENT ================= */
         .content-wrapper {
             flex: 1;
             display: flex;
-            align-items: center;
             justify-content: center;
             padding: 40px 20px;
-            width: 100%;
         }
 
         .content {
@@ -98,12 +97,13 @@
             padding: 40px;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
 
         h2 {
             color: rgb(14, 28, 223);
             margin-bottom: 20px;
+            text-align: center;
         }
 
         .search-section {
@@ -147,7 +147,14 @@
             background-color: #0b3d91;
         }
 
-        /* Results Table */
+        /* Results */
+        .results-header {
+            margin: 30px 0 15px;
+            font-size: 1.2em;
+            color: #555;
+            text-align: center;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -161,21 +168,43 @@
         }
 
         th {
-            background-color: #f2f2f2;
-            color: rgb(14, 28, 223);
+            background-color: rgb(14, 28, 223);
+            color: white;
         }
 
-        td a {
-            color: rgb(14, 28, 223);
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Fix long sequences */
+        td.sequence-column {
+            max-width: 350px;          /* Limits column width */
+            word-break: break-all;     /* Breaks long words/sequences */
+            white-space: normal;       /* Allows wrapping */
+            overflow: hidden;          /* Hides overflow */
+        }
+
+        td.sequence-column:hover {
+            white-space: normal;
+            overflow: visible;
+            background: white;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .actions a {
             margin-right: 10px;
+            color: rgb(14, 28, 223);
+            font-weight: bold;
             text-decoration: none;
         }
 
-        td a:hover {
-            text-decoration: underline;
+        .actions a:hover {
+            color: #fbbf24;
         }
 
-        td form button {
+        .delete-btn {
             background: #dc3545;
             color: white;
             border: none;
@@ -184,15 +213,30 @@
             cursor: pointer;
         }
 
-        td form button:hover {
+        .delete-btn:hover {
             background: #c82333;
         }
 
         .no-results {
             text-align: center;
             color: #666;
+            margin: 40px 0;
+            font-size: 1.2em;
+        }
+
+        .link-center {
+            text-align: center;
             margin-top: 30px;
-            font-size: 18px;
+        }
+
+        .link-center a {
+            color: rgb(14, 28, 223);
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .link-center a:hover {
+            color: #fbbf24;
         }
 
         /* Footer */
@@ -202,7 +246,6 @@
             text-align: center;
             padding: 35px 20px;
             flex-shrink: 0;
-            margin-top: auto;
         }
 
         footer h3 {
@@ -222,6 +265,12 @@
             .search-box {
                 flex-direction: column;
             }
+            table, th, td {
+                font-size: 0.9em;
+            }
+            td.sequence-column {
+                max-width: 200px;
+            }
         }
     </style>
 </head>
@@ -231,7 +280,7 @@
     <!-- NAVBAR -->
     <header>
         <div class="nav-left">
-            <a href="/">
+            <a href="{{ url_for('home') }}">
                 <img src="{{ url_for('static', filename='unilag-logo.png') }}" alt="UNILAG Logo">
             </a>
             <div>
@@ -241,11 +290,13 @@
         </div>
 
         <nav>
-            <a href="/info">Info</a>
-            <a href="/input">Input</a>
+            <a href="{{ url_for('info_page') }}">Info</a>
+            <a href="{{ url_for('input_page') }}">Input</a>
         </nav>
 
-        <div class="nav-right"><a href="/search">🔍</a></div>
+        <div class="nav-right">
+            <a href="{{ url_for('search') }}">🔍</a>
+        </div>
     </header>
 
     <!-- PAGE HEADER -->
@@ -257,8 +308,8 @@
     <section class="content-wrapper">
         <div class="content">
 
-            <form method="POST" action="/search">
-                <!-- Search by Name -->
+            <!-- Search Forms -->
+            <form method="POST" action="{{ url_for('search') }}">
                 <div class="search-section">
                     <h2>Search by Protein Name</h2>
                     <div class="search-box">
@@ -267,7 +318,6 @@
                     </div>
                 </div>
 
-                <!-- Search by Sequence Pattern -->
                 <div class="search-section">
                     <h2>Search by Sequence Pattern</h2>
                     <div class="search-box">
@@ -277,40 +327,47 @@
                 </div>
             </form>
 
-            <!-- Search Results -->
-            {% if proteins %}
-                <h2>Results</h2>
-                <table>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Sequence</th>
-                        <th>Length</th>
-                        <th>Actions</th>
-                    </tr>
-                    {% for p in proteins %}
-                    <tr>
-                        <td>{{ p.id }}</td>
-                        <td>{{ p.name }}</td>
-                        <td>{{ p.sequence }}</td>
-                        <td>{{ p.length }}</td>
-                        <td>
-                            <a href="/protein/{{ p.id }}">View</a> |
-                            <a href="/edit/{{ p.id }}">Edit</a> |
-                            <form method="POST" action="/delete/{{ p.id }}" style="display:inline;">
-                                <button type="submit" onclick="return confirm('Are you sure you want to delete this protein?');">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            {% elif request.method == "POST" %}
-                <p class="no-results">No proteins found matching your search.</p>
-            {% endif %}
+            <!-- Results -->
+            {% if request.method == "POST" %}
+                <div class="results-header">
+                    Found {{ proteins|length }} protein(s)
+                </div>
 
-            <div style="text-align:center; margin-top:30px;">
-                <a href="/input">Analyze New Protein</a>
-            </div>
+                {% if proteins %}
+                    <table>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Sequence (truncated)</th>
+                            <th>Length</th>
+                            <th>Actions</th>
+                        </tr>
+                        {% for p in proteins %}
+                        <tr>
+                            <td>{{ p.id }}</td>
+                            <td>{{ p.name }}</td>
+                            <td class="sequence-column" title="{{ p.sequence }}">
+                                {{ p.sequence|truncate(80, true) }}
+                            </td>
+                            <td>{{ p.length }}</td>
+                            <td class="actions">
+                                <a href="{{ url_for('view_protein', protein_id=p.id) }}">View</a> |
+                                <a href="{{ url_for('edit_protein', protein_id=p.id) }}">Edit</a> |
+                                <form method="POST" action="{{ url_for('delete_protein', protein_id=p.id) }}" style="display:inline;">
+                                    <button type="submit" class="delete-btn" onclick="return confirm('Are you sure you want to delete this protein?');">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                {% else %}
+                    <p class="no-results">No proteins found matching your search.</p>
+                {% endif %}
+
+                <div class="link-center">
+                    <a href="{{ url_for('input_page') }}">Analyze New Protein</a>
+                </div>
+            {% endif %}
         </div>
     </section>
 
